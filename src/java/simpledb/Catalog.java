@@ -17,7 +17,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Threadsafe
  */
 public class Catalog {
+    private ConcurrentHashMap<Integer, Table> tables = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Integer> tableNames = new ConcurrentHashMap<>();
 
+    private class Table {
+        private final DbFile file;
+        private final String name;
+        private final String pKeyField;
+
+        public Table(DbFile file, String name, String pKeyField) {
+            this.file = file;
+            this.name = name;
+            this.pKeyField = pKeyField;
+        }
+    }
     /**
      * Constructor.
      * Creates a new, empty catalog.
@@ -37,6 +50,8 @@ public class Catalog {
      */
     public void addTable(DbFile file, String name, String pkeyField) {
         // some code goes here
+        this.tables.put(file.getId(), new Table(file, name, pkeyField));
+        this.tableNames.put(name, file.getId());
     }
 
     public void addTable(DbFile file, String name) {
@@ -60,7 +75,12 @@ public class Catalog {
      */
     public int getTableId(String name) throws NoSuchElementException {
         // some code goes here
-        return 0;
+        try {
+            return this.tableNames.get(name);
+        } catch (NullPointerException e) {
+            throw new NoSuchElementException();
+        }
+//        return 0;
     }
 
     /**
@@ -71,7 +91,9 @@ public class Catalog {
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        DbFile db_file = this.getDatabaseFile(tableid);
+        return db_file.getTupleDesc();
+//        return null;
     }
 
     /**
@@ -82,7 +104,8 @@ public class Catalog {
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        return this.tables.get(tableid).file;
+//        return null;
     }
 
     public String getPrimaryKey(int tableid) {
@@ -92,17 +115,21 @@ public class Catalog {
 
     public Iterator<Integer> tableIdIterator() {
         // some code goes here
-        return null;
+        return this.tables.keySet().iterator();
+//        return null;
     }
 
     public String getTableName(int id) {
         // some code goes here
-        return null;
+        return this.tables.get(id).name;
+//        return null;
     }
     
     /** Delete all tables from the catalog */
     public void clear() {
         // some code goes here
+        this.tables.clear();
+        this.tableNames.clear();
     }
     
     /**
