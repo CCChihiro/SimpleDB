@@ -67,7 +67,7 @@ public class HeapPage implements Page {
     */
     private int getNumTuples() {        
         // some code goes here
-        return 0;
+        return (BufferPool.getPageSize() * 8) / (this.td.getSize() * 8 + 1);
 
     }
 
@@ -75,11 +75,9 @@ public class HeapPage implements Page {
      * Computes the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      * @return the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      */
-    private int getHeaderSize() {        
-        
+    private int getHeaderSize() {
         // some code goes here
-        return 0;
-                 
+        return (getNumTuples() + 7) / 8;
     }
     
     /** Return a view of this page before it was modified
@@ -112,7 +110,8 @@ public class HeapPage implements Page {
      */
     public HeapPageId getId() {
     // some code goes here
-    throw new UnsupportedOperationException("implement this");
+        return this.pid;
+//    throw new UnsupportedOperationException("implement this");
     }
 
     /**
@@ -282,7 +281,13 @@ public class HeapPage implements Page {
      */
     public int getNumEmptySlots() {
         // some code goes here
-        return 0;
+        int cnt = 0;
+        for (int i = 0; i < numSlots; ++i) {
+            if (!isSlotUsed(i)) {
+                cnt += 1;
+            }
+        }
+        return cnt;
     }
 
     /**
@@ -290,7 +295,13 @@ public class HeapPage implements Page {
      */
     public boolean isSlotUsed(int i) {
         // some code goes here
-        return false;
+        if (i >= this.numSlots) {
+            return true;
+        }
+
+        byte offset = (byte) (i % 8);
+        byte bit = (byte) (this.header[i / 8] & 1 << offset);
+        return bit != (byte) 0;
     }
 
     /**
@@ -307,7 +318,13 @@ public class HeapPage implements Page {
      */
     public Iterator<Tuple> iterator() {
         // some code goes here
-        return null;
+        List<Tuple> tuples = new LinkedList<>();
+        for (int i = 0; i < this.getNumTuples(); ++i) {
+            if (this.isSlotUsed(i)) {
+                tuples.add(this.tuples[i]);
+            }
+        }
+        return tuples.iterator();
     }
 
 }
