@@ -14,7 +14,7 @@ public class HeapFileIterator extends AbstractDbFileIterator {
     }
 
     private Iterator<Tuple> getCurrentPageIterator(int pageNo) throws TransactionAbortedException, DbException {
-        HeapPageId pid = new HeapPageId(this.heapFile.getId(), 0);
+        HeapPageId pid = new HeapPageId(this.heapFile.getId(), pageNo);
         return ((HeapPage) Database.getBufferPool().getPage(this.tid, pid, Permissions.READ_ONLY)).iterator();
     }
 
