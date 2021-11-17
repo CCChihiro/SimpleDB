@@ -9,6 +9,9 @@ import java.io.Serializable;
 public class JoinPredicate implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    private final int fieldId1;
+    private final int fieldId2;
+    private final Predicate.Op op;
 
     /**
      * Constructor -- create a new predicate over two fields of two tuples.
@@ -26,6 +29,9 @@ public class JoinPredicate implements Serializable {
      */
     public JoinPredicate(int field1, Predicate.Op op, int field2) {
         // some code goes here
+        this.fieldId1 = field1;
+        this.fieldId2 = field2;
+        this.op = op;
     }
 
     /**
@@ -36,24 +42,26 @@ public class JoinPredicate implements Serializable {
      */
     public boolean filter(Tuple t1, Tuple t2) {
         // some code goes here
-        return false;
+        Field field1 = t1.getField(this.fieldId1);
+        Field field2 = t2.getField(this.fieldId2);
+        return field1.compare(this.op, field2);
     }
     
     public int getField1()
     {
         // some code goes here
-        return -1;
+        return this.fieldId1;
     }
     
     public int getField2()
     {
         // some code goes here
-        return -1;
+        return this.fieldId2;
     }
     
     public Predicate.Op getOperator()
     {
         // some code goes here
-        return null;
+        return this.op;
     }
 }
