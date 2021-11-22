@@ -88,6 +88,11 @@ public class HeapFile implements DbFile {
     public void writePage(Page page) throws IOException {
         // some code goes here
         // not necessary for lab1
+        PageId pid = page.getId();
+        RandomAccessFile raf = new RandomAccessFile(this.file, "rw");
+        raf.seek(pid.getPageNumber() * BufferPool.getPageSize());
+        raf.write(page.getPageData());
+        raf.close();
     }
 
     /**
@@ -101,17 +106,34 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public ArrayList<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
-        // some code goes here
-        return null;
         // not necessary for lab1
+        HeapPage page;
+        int i;
+        for (i = 0; i < this.numPages(); ++i) {
+            PageId pid = new HeapPageId(this.getId(), i);
+            page = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_ONLY);
+            if (page.getNumEmptySlots() == 0) {
+                continue;
+            }
+            page = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
+            page.insertTuple(t);
+            return new ArrayList<>(Collections.singletonList(page));
+        }
+        page = new HeapPage(new HeapPageId(getId(), i), HeapPage.createEmptyPageData());
+        page.insertTuple(t);
+        this.writePage(page);
+        return new ArrayList<>(Collections.singletonList(page));
     }
 
     // see DbFile.java for javadocs
     public ArrayList<Page> deleteTuple(TransactionId tid, Tuple t) throws DbException,
             TransactionAbortedException {
         // some code goes here
-        return null;
         // not necessary for lab1
+        RecordId rid = t.getRecordId();
+        HeapPage page = (HeapPage) Database.getBufferPool().getPage(tid, rid.getPageId(), Permissions.READ_WRITE);
+        page.deleteTuple(t);
+        return new ArrayList<>(Collections.singletonList(page));
     }
 
     // see DbFile.java for javadocs
