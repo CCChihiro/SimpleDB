@@ -33,7 +33,7 @@ public class BufferPool {
      * instead.
      */
     public static final int DEFAULT_PAGES = 50;
-
+    private LockManager lockManager;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -42,6 +42,7 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // some code goes here
         this.numPages = numPages;
+        lockManager = new LockManager();
     }
 
     public static int getPageSize() {
@@ -74,6 +75,24 @@ public class BufferPool {
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
         // some code goes here
+        //try to get the lock
+        boolean result = (perm == Permissions.READ_ONLY) ? lockManager.grantSLock(tid, pid)
+                : lockManager.grantXLock(tid, pid);
+        while (!result) {
+            // check deadlock
+            if (lockManager.deadlockOccurred(tid, pid)) {
+                throw new TransactionAbortedException();
+            }
+            // sleep for a while
+            try {
+                Thread.sleep(LockManager.SLEEP_MILLIS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            // try to get the lock again
+            result = (perm == Permissions.READ_ONLY) ? lockManager.grantSLock(tid, pid)
+                    : lockManager.grantXLock(tid, pid);
+        }
         Page page = this.pages.get(pid);
         if (page == null) {
             if (this.pages.size() == this.numPages) {
@@ -93,9 +112,11 @@ public class BufferPool {
      * @param tid the ID of the transaction requesting the unlock
      * @param pid the ID of the page to unlock
      */
-    public void releasePage(TransactionId tid, PageId pid) {
+    public void releasePage(TransactionId tid, PageId pid) throws TransactionAbortedException {
         // some code goes here
         // not necessary for lab1|lab2
+        if(!lockManager.unlock(tid, pid))
+            throw new TransactionAbortedException();
     }
 
     /**
@@ -112,7 +133,7 @@ public class BufferPool {
     public boolean holdsLock(TransactionId tid, PageId p) {
         // some code goes here
         // not necessary for lab1|lab2
-        return false;
+        return lockManager.getLockState(tid, p) != null;
     }
 
     /**
