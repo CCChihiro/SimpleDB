@@ -79,9 +79,10 @@ public class Join extends Operator {
 
     public void close() {
         // some code goes here
+        super.close();
+        this.left = null;
         this.childOp1.close();
         this.childOp2.close();
-        super.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {

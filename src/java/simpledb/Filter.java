@@ -45,8 +45,8 @@ public class Filter extends Operator {
 
     public void close() {
         // some code goes here
-        this.childOp.close();
         super.close();
+        this.childOp.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
