@@ -128,7 +128,6 @@ public class SeqScan implements OpIterator {
     public void close() {
         // some code goes here
         this.it.close();
-        this.it = null;
     }
 
     public void rewind() throws DbException, NoSuchElementException,
