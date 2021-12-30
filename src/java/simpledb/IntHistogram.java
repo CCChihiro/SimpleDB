@@ -1,9 +1,17 @@
 package simpledb;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+import java.util.stream.Collectors;
+
 /** A class to represent a fixed-width histogram over a single integer-based field.
  */
 public class IntHistogram {
-
+    private final int[] buckets;
+    private final int min;
+    private final int max;
+    private final double bucketStep;
     /**
      * Create a new IntHistogram.
      * 
@@ -22,6 +30,15 @@ public class IntHistogram {
      */
     public IntHistogram(int buckets, int min, int max) {
     	// some code goes here
+        this.buckets = new int[buckets];
+        Arrays.fill(this.buckets, 0);
+        this.min = min;
+        this.max = max;
+        this.bucketStep = (double) (max - min + 1) / buckets;
+    }
+
+    private int getIndexByValue(int value) {
+        return (int) ((double) (value - min) * (buckets.length) / (max + 1 - min));
     }
 
     /**
@@ -30,6 +47,8 @@ public class IntHistogram {
      */
     public void addValue(int v) {
     	// some code goes here
+        int index = this.getIndexByValue(v);
+        ++this.buckets[index];
     }
 
     /**
@@ -45,7 +64,62 @@ public class IntHistogram {
     public double estimateSelectivity(Predicate.Op op, int v) {
 
     	// some code goes here
-        return -1.0;
+        Predicate.Op fakeOp = op;
+        int idx = getIndexByValue(v);
+        if (idx < 0) {
+            idx = 0;
+            if (op == Predicate.Op.GREATER_THAN) {
+                fakeOp = Predicate.Op.GREATER_THAN_OR_EQ;
+            } else if (op == Predicate.Op.LESS_THAN_OR_EQ) {
+                fakeOp = Predicate.Op.LESS_THAN;
+            } else if (op == Predicate.Op.EQUALS) {
+                fakeOp = Predicate.Op.LESS_THAN;
+            } else if (op == Predicate.Op.NOT_EQUALS) {
+                fakeOp = Predicate.Op.GREATER_THAN_OR_EQ;
+            }
+        } else if (idx >= buckets.length) {
+            idx = buckets.length - 1;
+            if (op == Predicate.Op.LESS_THAN) {
+                fakeOp = Predicate.Op.LESS_THAN_OR_EQ;
+            } else if (op == Predicate.Op.GREATER_THAN_OR_EQ) {
+                fakeOp = Predicate.Op.GREATER_THAN;
+            } else if (op == Predicate.Op.EQUALS) {
+                fakeOp = Predicate.Op.GREATER_THAN;
+            } else if (op == Predicate.Op.NOT_EQUALS) {
+                fakeOp = Predicate.Op.LESS_THAN_OR_EQ;
+            }
+        }
+
+        int sum = Arrays.stream(buckets).sum();
+        int lessThan = Arrays.stream(buckets, 0, idx).sum();
+        int greatThan = Arrays.stream(buckets, idx, buckets.length).sum() - buckets[idx];
+
+        int elements;
+
+        switch (fakeOp) {
+            case EQUALS:
+                elements = sum - lessThan - greatThan;
+                break;
+            case LESS_THAN:
+                elements = lessThan;
+                break;
+            case LESS_THAN_OR_EQ:
+                elements = sum - greatThan;
+                break;
+            case GREATER_THAN:
+                elements = greatThan;
+                break;
+            case GREATER_THAN_OR_EQ:
+                elements = sum - lessThan;
+                break;
+            case NOT_EQUALS:
+                elements = lessThan + greatThan;
+                break;
+            default:
+                throw new UnsupportedOperationException();
+        }
+
+        return sum == 0 ? 0 : (double) elements / sum;
     }
     
     /**
@@ -56,10 +130,20 @@ public class IntHistogram {
      *     join optimization. It may be needed if you want to
      *     implement a more efficient optimization
      * */
-    public double avgSelectivity()
+    public double avgSelectivity(Predicate.Op op)
     {
         // some code goes here
-        return 1.0;
+        double avg = 0.0;
+        if (max - min + 1 > 100) {
+            Random r = new Random();
+            for (int i = 0; i < 100; ++i)
+                avg += estimateSelectivity(op, r.nextInt(max - min + 1) + min);
+            return avg / 100;
+        } else {
+            for (int i = min; i <= max; ++i)
+                avg += estimateSelectivity(op, i);
+            return avg / (max - min + 1);
+        }
     }
     
     /**
@@ -67,6 +151,7 @@ public class IntHistogram {
      */
     public String toString() {
         // some code goes here
-        return null;
+        List<String> stringList = Arrays.stream(buckets).mapToObj(String::valueOf).collect(Collectors.toList());
+        return String.join(", ", stringList);
     }
 }
