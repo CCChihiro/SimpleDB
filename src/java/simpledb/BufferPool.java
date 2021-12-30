@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -137,9 +138,9 @@ public class BufferPool {
         // some code goes here
         // not necessary for lab1|lab2
         Set<PageId> pids = new HashSet<>();
-        for (Map.Entry<PageId, ReadWritePageLock> entry : this.pageLocks.entrySet()) {
-            PageId pid = entry.getKey();
-            ReadWritePageLock pageLock = entry.getValue();
+        for (Page page : this.pages.values()) {
+            PageId pid = page.getId();
+            ReadWritePageLock pageLock = this.pageLocks.get(pid);
             if (pageLock.getTransactions().contains(tid)) {
                 pids.add(pid);
             }
@@ -148,11 +149,7 @@ public class BufferPool {
         for (PageId pid : pids) {
             if (commit) {
                 // flush to disk
-                // use current page contents as the before-image
-                // for the next transaction that modifies this page.
                 this.flushPage(pid);
-                this.pages.get(pid).setBeforeImage();
-                // p.setBeforeImage();
             } else {
                 // retrieve old state
                 Page page = Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
@@ -251,17 +248,8 @@ public class BufferPool {
     private synchronized void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
-
         Page page = pages.get(pid);
         DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
-        // append an update record to the log, with
-        // a before-image and after-image.
-        TransactionId dirtier = page.isDirty();
-        if (dirtier != null) {
-            Database.getLogFile().logWrite(dirtier, page.getBeforeImage(), page);
-            Database.getLogFile().force();
-        }
-
         dbFile.writePage(page);
         page.markDirty(false, null);
     }
