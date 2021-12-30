@@ -5,10 +5,12 @@ package simpledb;
  * Private constructor with two static objects READ_ONLY and READ_WRITE that
  * represent the two levels of permission.
  */
-public class Permissions {
+public enum Permissions {
+  READ_ONLY(0), READ_WRITE(1);
+
   int permLevel;
 
-  private Permissions(int permLevel) {
+  Permissions(int permLevel) {
     this.permLevel = permLevel;
   }
 
@@ -20,7 +22,7 @@ public class Permissions {
     return "UNKNOWN";
   }
 
-  public static final Permissions READ_ONLY = new Permissions(0);
-  public static final Permissions READ_WRITE = new Permissions(1);
+  // public static final Permissions READ_ONLY = new Permissions(0);
+  // public static final Permissions READ_WRITE = new Permissions(1);
 
 }
